@@ -237,8 +237,13 @@ namespace ProgramsTime
 
         public string ToString( IEnumerable<ProgEnter> items)
         {
-            var d = GetProgDuration(items);
-            return (Prog.Duration == 60 ? "#####ЧАС#####>" : "") + Prog.Name + " (" + d + " мин) : " + ProgDate.ToString() + " - " + Prog.Kind +  " en:" + EndMinute.ToLongTimeString()
+            var (d,d2) = GetProgDurationByHalf(items);
+
+            return (Prog.Duration == 60 ? "#####ЧАС#####>" : "") + Prog.Name + " (" + 
+
+            (Prog.Duration == 60 ? (d+","+d2) : d.ToString() ) 
+                
+                + " мин) : " + ProgDate.ToString() + " - " + Prog.Kind +  " en:" + EndMinute.ToLongTimeString()
                 + " [" + File+"]";
 
 
@@ -250,6 +255,25 @@ namespace ProgramsTime
             if (Prog.Duration < 60) return EndMinute - StartMinute;
             else
                 return TimeSpan.FromSeconds(Prog.Duration*60 - plist.Where(f => f.ProgHour == ProgHour && !f.Prog.IsHourProg).Sum(f => f.GetProgDuration(plist).TotalSeconds));
+        }
+
+        public (TimeSpan, TimeSpan) GetProgDurationByHalf(IEnumerable<ProgEnter> plist)
+        {
+            if (Prog.Duration < 60) return (EndMinute - StartMinute, new TimeSpan(0));
+            else
+            {
+                var total_mpg = TimeSpan.FromSeconds(Prog.Duration * 60 - plist.Where(f => f.ProgHour == ProgHour && !f.Prog.IsHourProg).Sum(f => f.GetProgDuration(plist).TotalSeconds));
+                var first_mpg = TimeSpan.FromSeconds(Prog.Duration * 30 - plist.Where(f => f.ProgHour == ProgHour && !f.Prog.IsHourProg && f.StartMinute.Minute < 30).Sum(f => f.GetProgDuration(plist).TotalSeconds));
+                var second_mpg = TimeSpan.FromSeconds(Prog.Duration * 30 - plist.Where(f => f.ProgHour == ProgHour && !f.Prog.IsHourProg && f.StartMinute.Minute >= 30).Sum(f => f.GetProgDuration(plist).TotalSeconds));
+
+                if (total_mpg != first_mpg + second_mpg)
+                {
+                    throw new Exception("not summ");
+                }
+
+                return (first_mpg, second_mpg);
+            }
+
         }
 
     }
